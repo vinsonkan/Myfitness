@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>100天增肌減脂私人教練</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="100天教練">
+    
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
+
+    <style>
+        :root {
+            --safe-top: env(safe-area-inset-top, 20px);
+            --safe-bottom: env(safe-area-inset-bottom, 20px);
+        }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background-color: #121212; 
+            color: #e0e0e0; 
+            margin: 0; 
+            padding: calc(var(--safe-top) + 20px) 20px calc(var(--safe-bottom) + 20px) 20px;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .container { max-width: 600px; margin: 0 auto; background: #1e1e1e; padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        h1 { text-align: center; color: #ff9f43; font-size: 1.6em; margin-bottom: 5px; }
+        .day-counter { background: linear-gradient(45deg, #ff6b6b, #ff9f43); padding: 15px; border-radius: 12px; text-align: center; font-size: 1.3em; font-weight: bold; color: white; margin-bottom: 20px; }
+        .routine-box { background: #2d2d2d; padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 5px solid #10ac84; }
+        .time-slot { display: flex; justify-content: space-between; align-items: center; padding: 14px; background: #252525; margin-bottom: 8px; border-radius: 8px; }
+        .time { color: #ff9f43; font-weight: bold; min-width: 70px; font-size: 1.1em; }
+        .task { flex-grow: 1; margin-left: 15px; font-size: 0.95em; }
+        button { display: block; width: 100%; padding: 15px; background: #10ac84; color: white; border: none; border-radius: 10px; font-size: 1.1em; font-weight: bold; cursor: pointer; margin-bottom: 20px; }
+        .day-btn-container { display: flex; justify-content: space-between; margin-top: 15px; }
+        .day-btn { width: 48%; background: #3d3d3d; padding: 12px; font-size: 0.95em; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🏋️‍♂️ 獨立教練 & 營養師</h1>
+    <div class="day-counter" id="dayDisplay">100天計劃：第 1 天</div>
+    
+    <button onclick="requestPermission()">🔔 啟動教練即時通知</button>
+
+    <div class="routine-box">
+        <h3>📅 今日訓練 (<span id="trainingType">胸部 + 三頭</span>)</h3>
+        <p id="trainingDetails">載入中...</p>
+    </div>
+
+    <div class="routine-box" style="border-left-color: #ff9f43;">
+        <h3>🥗 今日飲食餐單</h3>
+        <p id="dietDetails">載入中...</p>
+    </div>
+
+    <h3>⏰ 每日定時提醒時間表</h3>
+    <div id="timeline"></div>
+
+    <div class="day-btn-container">
+        <button class="day-btn" onclick="adjustDay(-1)">⬅️ 前一天</button>
+        <button class="day-btn" onclick="adjustDay(1)">後一天 ➡️</button>
+    </div>
+</div>
+
+<script>
+    let currentPlanDay = parseInt(localStorage.getItem('currentPlanDay')) || 1;
+
+    const trainingRoutines = {
+        "胸背腳循環": [
+            { type: "胸部 + 三頭肌 (Push)", target: "🏋️ 動作：啞鈴臥推 4組、上斜俯臥撐 4組、三頭下壓 4組。" },
+            { type: "背部 + 二頭肌 (Pull)", target: "🏋️ 動作：引體上升/滑輪下拉 4組、啞鈴划船 4組、雙臂二頭彎舉 4組。" },
+            { type: "腿部 + 肩部 (Legs)", target: "🏋️ 動作：深蹲 4組、保加利亞單腿蹲 4組、啞鈴推舉 4組。" }
+        ],
+        "休息": { type: "完全休息日 (Rest)", target: "🧘 休息：做30分鐘全身拉筋伸展，等肌肉好好修復。" }
+    };
+
+    const dailySchedule = [
+        { time: "08:00", title: "🥤 晨起補水 & Supplement", body: "飲水 500ml + 食綜合維他命同魚油！" },
+        { time: "12:00", title: "💧 午餐前補水", body: "飮水 500ml，準備食高蛋白午餐。" },
+        { time: "15:00", title: "🥛 蛋白質補充時間", body: "飲水 500ml + 飲第一杯 Protein Shake！" },
+        { time: "18:00", title: "💪 訓練前補水", body: "飲水 500ml，為陣間嘅特訓注入水分！" },
+        { time: "21:00", title: "🍳 補水 & 肌肉修復", body: "飲水 500ml + 飲第二杯 Protein Shake 或食晚餐！" },
+        { time: "22:30", title: "💤 睡前補水", body: "飲埋最後 500ml 水，今日 3000ml 目標達成！" }
+    ];
+
+    function updateDashboard() {
+        if(currentPlanDay > 100) currentPlanDay = 1;
+        if(currentPlanDay < 1) currentPlanDay = 100;
+        localStorage.setItem('currentPlanDay', currentPlanDay);
+        
+        document.getElementById("dayDisplay").innerText = `100天計劃：第 ${currentPlanDay} 天`;
+
+        const weekDay = ((currentPlanDay - 1) % 7) + 1; 
+        let train, diet;
+
+        if (weekDay === 7) {
+            train = trainingRoutines["休息"];
+            diet = "🍕 【Cheat Day】一餐隨心食！其餘兩餐保持高蛋白（如雞肉飯），好好放鬆。";
+        } else {
+            const cycleIndex = (weekDay - 1) % 3;
+            train = trainingRoutines["胸背腳循環"][cycleIndex];
+            diet = "🍗 【嚴格燃脂日】2-3餐高蛋白低脂。推薦：去皮海南雞飯或煎雞胸肉配西蘭花。";
+        }
+
+        document.getElementById("trainingType").innerText = train.type;
+        document.getElementById("trainingDetails").innerText = train.target;
+        document.getElementById("dietDetails").innerText = diet;
+
+        let html = "";
+        dailySchedule.forEach(item => {
+            html += `<div class="time-slot"><span class="time">${item.time}</span><span class="task">${item.title}</span></div>`;
+        });
+        document.getElementById("timeline").innerHTML = html;
+    }
+
+    function adjustDay(amount) {
+        currentPlanDay += amount;
+        updateDashboard();
+    }
+
+    function requestPermission() {
+        if (!("Notification" in window)) { alert("此設備目前未支援通知，請確保已將網頁「加入主畫面」後再點擊。"); return; }
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                new Notification("私人教練提示", { body: "100天增肌減脂計劃已經啟動，一齊加油！" });
+            }
+        });
+    }
+
+    setInterval(() => {
+        const now = new Date();
+        const curTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        
+        dailySchedule.forEach(item => {
+            if (item.time === curTime && Notification.permission === "granted") {
+                const trainType = document.getElementById("trainingType").innerText;
+                new Notification(item.title, {
+                    body: `${item.body}\n今日訓練: ${trainType}`,
+                });
+            }
+        });
+
+        if (curTime === "00:00") {
+            currentPlanDay++;
+            updateDashboard();
+        }
+    }, 60000);
+
+    window.onload = updateDashboard;
+</script>
+
+</body>
+</html>
